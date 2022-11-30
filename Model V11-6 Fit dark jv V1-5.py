@@ -294,7 +294,7 @@ Guess_Jdark_line, = axs[0].plot(v,
                                 linewidth=1.2, c='purple', label='Guess')
 Guess_Slope_line, = axs[1].plot(v, 
                                 Slope(v, init_Rsh, init_Joffset, init_Jo, init_n, init_JoBd, init_JoTsh, init_tsh, init_JoBsh, init_JoTs, init_ts, init_JoIp, init_ip, init_Rs), 
-                                linewidth=1.2)
+                                linewidth=1.2, c='purple')
 Fit_Jdark_line, = axs[0].plot(v, 
                               Jdark(v, init_Rsh, init_Joffset, init_Jo, init_n, init_JoBd, init_JoTsh, init_tsh, init_JoBsh, init_JoTs, init_ts, init_JoIp, init_ip, init_Rs), 
                               linewidth=1.2, c='orange', label='Fit')
@@ -303,9 +303,15 @@ Fit_Slope_line, = axs[1].plot(v,
                               linewidth=1.2, c='orange')
 
 # Add Rs voltage drops to inset
-Guess_Rs_volt_drop_line, = axins.plot(v, Rs_volt_drop(v, init_Rsh, init_Joffset, init_Jo, init_n, init_JoBd, init_JoTsh, init_tsh, init_JoBsh, init_JoTs, init_ts, init_JoIp, init_ip, init_Rs), linewidth=0.5)
-Fit_Rs_volt_drop_line, = axins.plot(v, Rs_volt_drop(v, init_Rsh, init_Joffset, init_Jo, init_n, init_JoBd, init_JoTsh, init_tsh, init_JoBsh, init_JoTs, init_ts, init_JoIp, init_ip, init_Rs), linewidth=0.5)
-Rs_volt_drop_func_line, = axins.plot(v, Rs_volt_drop_func(v), linewidth=0.5, c='red')
+Guess_Rs_volt_drop_line, = axins.plot(v, 
+                                      Rs_volt_drop(v, init_Rsh, init_Joffset, init_Jo, init_n, init_JoBd, init_JoTsh, init_tsh, init_JoBsh, init_JoTs, init_ts, init_JoIp, init_ip, init_Rs), 
+                                      linewidth=0.5)
+Fit_Rs_volt_drop_line, = axins.plot(v, 
+                                    Rs_volt_drop(v, init_Rsh, init_Joffset, init_Jo, init_n, init_JoBd, init_JoTsh, init_tsh, init_JoBsh, init_JoTs, init_ts, init_JoIp, init_ip, init_Rs), 
+                                    linewidth=0.5)
+Rs_volt_drop_func_line, = axins.plot(v, 
+                                     Rs_volt_drop_func(v), 
+                                     linewidth=0.5, c='red')
 
 # Add labels for individual circuit elements
 Rs_box = axs[0].text(0.9*v.min(), Rseries(v.min(), init_Rs), '$R_s$')
