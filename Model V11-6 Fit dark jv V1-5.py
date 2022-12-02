@@ -12,23 +12,32 @@ import numpy as np                              # arrays
 import matplotlib.pyplot as plt                 # plots 
 from matplotlib.widgets import Slider, Button   # sliders, buttons
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes # inset plot
-from scipy import interpolate
+from scipy import interpolate                   # curve interpolation
 from scipy.optimize import curve_fit, fsolve    # curve fitting
 
 # Path to file (Mac/Windows/Unix compatible, replace / with : in filename)
 files = Path(
-    "/Users/arangolab/Library/Mobile Documents/com~apple~CloudDocs/Data for publication/Disorder paper/Data/20180222-3 Dark New.txt"
+    "/Users/arangolab/Library/Mobile Documents/com~apple~CloudDocs/Data for publication/Disorder paper/Data/20180222-5 pF7 dark.txt"
 )
 
 # Set global constants here:
 A = 0.0121				# device area
 k = 8.617333262e-5		# Boltzmann constant
 T = 300					# temperature
-d = 0.3					# offset from voltage to energy
-Vo = 1				# compensation voltage
-Vbi = 0.6				# built-in potential
-width = 0.4             # sharpness of Rs voltage drop
 sweep_up_or_down = 0    # select 0 for upward and 2 for downward
+
+# built-in potential from electrode offset
+Vbi = 0.6
+
+# compensation voltage (at which photocurrent = 0)
+Vo = 0.85
+
+# sharpness of Rs voltage drop (raise/lower Rs curve)
+width = 0.3
+
+# offset between voltage and energy
+d = 0.3
+
 
 # Read file data into DataFrame, remove zeroes, sort
 jvcurve = pd.read_csv(files, sep='\t')			              # tab delimited
@@ -49,7 +58,7 @@ axins = inset_axes(axs[1], width="50%", height="50%",
 # Select initial parameters here (horizontal sliders):
 axRs = fig.add_axes([0.6, 24*0.037, 0.32, 0.03])			  # create slider
 axRs.set_title('Series resistance terms:')
-axs[0].text(1.23, 0.75, "$V_{0}=$" + str(Vo) + "V, $width=$" + str(width) + "V", transform=axs[0].transAxes)		#text box for model version
+axs[0].text(1.23, 0.75, "$V_{0}=$" + str(Vo) + "V, $V_{bi}=$" + str(Vbi) + "V, $width=$" + str(width) + "V", transform=axs[0].transAxes)		#text box for model version
 Rs_slider = Slider(
     ax=axRs, label='Rs',
     valmin = 50,
@@ -232,7 +241,7 @@ fint_jvslope = interpolate.interp1d(v, jvslope, kind='linear')
 axs[1].plot(Vo, fint_jvslope(Vo), marker='+')
 axs[1].plot(Vbi, fint_jvslope(Vbi), marker='+')
 axs[1].plot(Vo + Vbi, fint_jvslope(Vo + Vbi), marker='+')
-axs[1].text(Vo, fint_jvslope(Vo), '$V_0$', ha='left')
+axs[1].text(Vo, fint_jvslope(Vo), '$V_0$', ha='right')
 axs[1].text(Vbi, fint_jvslope(Vbi), '$V_{bi}$', ha='right')
 axs[1].text(Vo + Vbi, fint_jvslope(Vo + Vbi), '$V_0+V_{bi}$', ha='left')
 axins.plot(Vo, Rs_volt_drop_func(Vo), marker='+')
@@ -332,14 +341,30 @@ axs[0].legend(loc='upper left', frameon=False)
 def update(val):
     
     # Update circuit element lines
-    Rshunt_line.set_ydata(Rshunt(v,Rsh_slider.val,Joffset_slider.val))
-    Diode_line.set_ydata(Diode(v,Jo_slider.val,n_slider.val))
-    block_Diode_line.set_ydata(block_Diode(v,JoBd_slider.val))
-    Tshunt_line.set_ydata(Tshunt(v, JoTsh_slider.val, tsh_slider.val))
-    block_Tshunt_line.set_ydata(block_Tshunt(v,JoBsh_slider.val))
-    Tseries_line.set_ydata(Tseries(v, JoTs_slider.val, ts_slider.val))
-    Inj_p_line.set_ydata(Inj_p(v, JoIp_slider.val, ip_slider.val))
-    Rseries_line.set_ydata(Rseries(v, Rs_slider.val))
+    Rshunt_line.set_ydata(
+        Rshunt(v,Rsh_slider.val,Joffset_slider.val)
+    )
+    Diode_line.set_ydata(
+        Diode(v,Jo_slider.val,n_slider.val)
+    )
+    block_Diode_line.set_ydata(
+        block_Diode(v,JoBd_slider.val)
+    )
+    Tshunt_line.set_ydata(
+        Tshunt(v, JoTsh_slider.val, tsh_slider.val)
+    )
+    block_Tshunt_line.set_ydata(
+        block_Tshunt(v, JoBsh_slider.val)
+    )
+    Tseries_line.set_ydata(
+        Tseries(v, JoTs_slider.val, ts_slider.val)
+    )
+    Inj_p_line.set_ydata(
+        Inj_p(v, JoIp_slider.val, ip_slider.val)
+    )
+    Rseries_line.set_ydata(
+        Rseries(v, Rs_slider.val)
+    )
     
     # Update circuit leg lines
     Jdark_exp_line.set_ydata(Jdark_exp(v,Jo_slider.val,n_slider.val,JoBd_slider.val))
