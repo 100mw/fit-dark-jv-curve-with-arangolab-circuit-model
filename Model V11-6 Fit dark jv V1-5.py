@@ -17,7 +17,7 @@ from scipy.optimize import curve_fit, fsolve    # curve fitting
 
 # Path to file (Mac/Windows/Unix compatible, replace / with : in filename)
 files = Path(
-    "/Users/arangolab/Library/Mobile Documents/com~apple~CloudDocs/Data for publication/Disorder paper/Data/20180222-5 pF7 dark.txt"
+    "/Users/arangolab/Library/Mobile Documents/com~apple~CloudDocs/iCloud Data/Masha Helen/Single layer JV data/20220815-2-retest38d-7_9:22:22.txt"
 )
 
 # Set global constants here:
@@ -27,13 +27,13 @@ T = 300					# temperature
 sweep_up_or_down = 0    # select 0 for upward and 2 for downward
 
 # built-in potential from electrode offset
-Vbi = 0.6
+Vbi = 0.5
 
 # compensation voltage (at which photocurrent = 0)
-Vo = 0.85
+Vo = 1.5
 
 # sharpness of Rs voltage drop (raise/lower Rs curve)
-width = 0.3
+width = 0.7
 
 # offset between voltage and energy
 d = 0.3
@@ -204,8 +204,8 @@ def Slope_series(x, JoTs, ts, JoIp, ip):
     return np.gradient(np.log10(Jdark_series(x, JoTs, ts, JoIp, ip)), np.log10(x))	#slope transport (series) leg
 
 # Find slope of logj-logv plot 
-jvslope = np.gradient(np.log10(j),np.log10(v),edge_order=2)		#derivative of log-log jv data
-jvcurve['Slope of log-log j-v curve'] = jvslope					#append to DataFrame
+jvslope = np.gradient(np.log10(j), np.log10(v), edge_order=2)		#derivative of log-log jv data
+jvcurve['Slope of log-log j-v curve'] = jvslope		   #append to DataFrame
 
 # Create scatter plot
 axs[1].set_xlabel("Voltage [V]")
@@ -223,7 +223,7 @@ axs[0].set_ylim(			# set axis limits
 )
 axs[1].set_ylim(			# set axis limits
     1,			            # grab min from current data and adjust spacing
-    3*jvslope.max()			# grab max from current data and adjust spacing
+    3*np.nanmax(jvslope)			# grab max from current data and adjust spacing
 )
 axs[0].scatter(v, j, s=1.3, color='#4d96f9', label = files.name)	#plot current density
 axs[0].text(0.8, 0.05,model_version,transform=axs[0].transAxes)		#text box for model version
