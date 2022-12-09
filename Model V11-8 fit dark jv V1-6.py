@@ -17,7 +17,7 @@ from scipy.optimize import curve_fit, fsolve    # curve fitting
 
 # Path to file (Mac/Windows/Unix compatible, replace / with : in filename)
 files = Path(
-    "/Users/arangolab/Library/Mobile Documents/com~apple~CloudDocs/iCloud Data/Masha Helen/Single layer JV data/20220802-3-retest23d-9_8:25:22.txt"
+    "/Users/arangolab/Library/Mobile Documents/com~apple~CloudDocs/iCloud Data/Masha Helen/Single layer JV data/20220815-2-retest10d-9_8:25:22.txt"
 )
 
 # Set global constants here:
@@ -26,19 +26,11 @@ k = 8.617333262e-5		# Boltzmann constant
 T = 300					# temperature
 sweep_up_or_down = 0    # select 0 for upward and 2 for downward
 
-# built-in potential from electrode offset
-Vbi = 0.5
-
-# compensation voltage (at which photocurrent = 0)
-Vo = 1.5
-
-# sharpness of Rs voltage drop (raise/lower Rs curve)
-width = 0.6
-
 # offset between voltage and energy
 d = 0.3
 
-bd = 1.5
+# power law exponent for diode blocking term
+bd = 3
 
 
 # Read file data into DataFrame, remove zeroes, sort
@@ -58,18 +50,37 @@ axins = inset_axes(axs[1], width="50%", height="50%",
                    bbox_transform=axs[1].transAxes, loc=2)       # inset plot
 
 """
-# Select initial parameters here (horizontal sliders):
+Horizontal sliders:
 """
-axRs = fig.add_axes([0.6, 24*0.037, 0.32, 0.03])			  # create slider
+spacing = 0.037
+axVbi = fig.add_axes([0.6, 25*spacing, 0.32, 0.03])
+axVbi.set_title('Preset parameters:')
+Vbi_slider = Slider(ax=axVbi,label='Vbi', 
+    valmin = 0, 
+    valinit = 0.5,     # built-in potential from electrode offset
+    valmax = 0.8
+)
+axVo = fig.add_axes([0.6, 24*spacing, 0.32, 0.03])
+Vo_slider = Slider(ax=axVo,label='Vo', 
+    valmin = 0.5, 
+    valinit = 1.5,     # compensation voltage (at which photocurrent = 0?)
+    valmax = 2
+)
+axwidth = fig.add_axes([0.6, 23*spacing, 0.32, 0.03])
+width_slider = Slider(ax=axwidth,label='width', 
+    valmin = 0.2, 
+    valinit = 0.5,     # curvature of Vrs curve
+    valmax = 0.8
+)
+axRs = fig.add_axes([0.6, 21*spacing, 0.32, 0.03])			  # create slider
 axRs.set_title('Series resistance terms:')
-axs[0].text(1.23, 0.75, "$V_{0}=$" + str(Vo) + "V, $V_{bi}=$" + str(Vbi) + "V, $width=$" + str(width) + "V", transform=axs[0].transAxes)		#text box for model version
 Rs_slider = Slider(
     ax=axRs, label='Rs',
     valmin = 50,
     valinit = 86, 	                      # Rs Ohmic series resistance [Ohms]
     valmax = 200
 )
-axJoTs = fig.add_axes([0.6, 21*0.037, 0.32, 0.03])
+axJoTs = fig.add_axes([0.6, 19*spacing, 0.32, 0.03])
 axJoTs.set_title('Jseries terms (below $V_0+V_{bi}$):')
 JoTs_slider = Slider(
     ax=axJoTs, label='JoTs', 
@@ -77,28 +88,28 @@ JoTs_slider = Slider(
     valinit = 1.5,	         # JoTs Coefficient for series transport [mA/cm2]
     valmax = 3
 )
-axts = fig.add_axes([0.6, 20*0.037, 0.32, 0.03])
+axts = fig.add_axes([0.6, 18*spacing, 0.32, 0.03])
 ts_slider = Slider(
     ax=axts, label='ts',
     valmin = 5,
     valinit = 9.6,	             # ts Power law exponent for series transport
     valmax = 12
 )
-axJoIp = fig.add_axes([0.6, 19*0.037, 0.32, 0.03])
+axJoIp = fig.add_axes([0.6, 17*spacing, 0.32, 0.03])
 JoIp_slider = Slider(
     ax=axJoIp, label='JoIp',
     valmin = 0.8,
     valinit = 1.5, 	       # JoIp Coefficient for Injection (p-side) [mA/cm2]
     valmax = 3
 )
-axip = fig.add_axes([0.6, 18*0.037, 0.32, 0.03])
+axip = fig.add_axes([0.6, 16*spacing, 0.32, 0.03])
 ip_slider = Slider(
     ax=axip, label='ip',
     valmin = 15,
     valinit = 20,		       # ip Power law exponent for injection (p-side)
     valmax = 40
 )
-axJoBsh = fig.add_axes([0.6, 16*0.037, 0.32, 0.03])
+axJoBsh = fig.add_axes([0.6, 14*spacing, 0.32, 0.03])
 axJoBsh.set_title('Jshunt terms (below $V_{0}$):')
 JoBsh_slider = Slider(
     ax=axJoBsh, label='JoBsh',
@@ -106,48 +117,48 @@ JoBsh_slider = Slider(
     valinit = 3.3,	# JoBsh Coefficient for blockling layer (shunt) [mA/cm2]
     valmax = 15
 )
-axJoTsh = fig.add_axes([0.6, 15*0.037, 0.32, 0.03])
+axJoTsh = fig.add_axes([0.6, 13*spacing, 0.32, 0.03])
 JoTsh_slider = Slider(
     ax=axJoTsh, label='JoTsh',
     valmin = 0.5,
     valinit = 1,		             # JoTsh Coefficient for shunt transport
     valmax = 3
 )
-axtsh = fig.add_axes([0.6, 14*0.037, 0.32, 0.03])
+axtsh = fig.add_axes([0.6, 12*spacing, 0.32, 0.03])
 tsh_slider = Slider(
     ax=axtsh, label='tsh',
     valmin = 4,
     valinit = 7.2,				# tsh Power law exponent for shunt transport
     valmax = 12
 )
-axJoBd = fig.add_axes([0.6, 12*0.037, 0.32, 0.03])
+axJoBd = fig.add_axes([0.6, 10*spacing, 0.32, 0.03])
 axJoBd.set_title('Jdiffusion terms (below $V_{bi}$):')
 JoBd_slider = Slider(ax=axJoBd,label='JoBd'
     ,valmin = 1e-2 
     ,valinit = 0.083  # JoBd Coefficient for blockling layer (diode) [mA/cm2]
     ,valmax = 1
 )
-axJo = fig.add_axes([0.6, 11*0.037, 0.32, 0.03])
+axJo = fig.add_axes([0.6, 9*spacing, 0.32, 0.03])
 Jo_slider = Slider(ax=axJo,label='Jo'
     ,valmin = 1e-7
     ,valinit = 1e-4				# Jo Diode saturation current [mA/cm2]
     ,valmax = 1e-3
 )
-axn = fig.add_axes([0.6, 10*0.037, 0.32, 0.03])
+axn = fig.add_axes([0.6, 8*spacing, 0.32, 0.03])
 n_slider = Slider(
     ax=axn,label='n', 
     valmin = 1,
     valinit = 2.5,				                          # n Diode ideality
     valmax = 10
 )
-axb = fig.add_axes([0.6, 8*0.037, 0.32, 0.03])
+axb = fig.add_axes([0.6, 6*spacing, 0.32, 0.03])
 axb.set_title('Blocking layer exponent:')
 b_slider = Slider(ax=axb,label='b', 
     valmin = 0.5, 
     valinit = 2,     # b Power law exponent for blocking layer
     valmax = 4
 )
-axRsh = fig.add_axes([0.6, 6*0.037, 0.32, 0.03])
+axRsh = fig.add_axes([0.6, 4*spacing, 0.32, 0.03])
 axRsh.set_title('Shunt resistance terms:')
 Rsh_slider = Slider(
     ax=axRsh, label='Rsh',
@@ -155,12 +166,13 @@ Rsh_slider = Slider(
     valinit = 1e8,				# Rsh Ohmic shunt resistance [Ohms]
     valmax = 1e9
 )
-axJoffset = fig.add_axes([0.6, 5*0.037, 0.32, 0.03])
+axJoffset = fig.add_axes([0.6, 3*spacing, 0.32, 0.03])
 Joffset_slider = Slider(ax=axJoffset,label='Joffset', 
     valmin = -1e-4, 
     valinit = 0,     # Joffset Instrumentation dc offset or illumination [mA/cm2]
     valmax = 1e-4
 )
+
 
 
 # Edit circuit model equations below
@@ -173,61 +185,60 @@ def Diode(x, Jo, n):
     return Jo*(np.exp(x/n/k/T)-1) 			#ideal diode
 def block_Diode(x, JoBd):
     return np.power(JoBd*x/d, bd)			#effect of blocking layer on ideal diode
-def Tshunt(x, JoTsh, tsh):
+def Tshunt(x, JoTsh, tsh, Vbi = Vbi_slider.val):
     return np.power(JoTsh*x/(Vbi+d), tsh)	#space charge transport (shunt)
-def block_Tshunt(x, JoBsh, b):
+def block_Tshunt(x, JoBsh, b, Vbi = Vbi_slider.val):
     return np.power(JoBsh*x/(Vbi+d), b)	#effect of blocking layer on transport (shunt)
-def Inj_p(x, JoIp, ip):
+def Inj_p(x, JoIp, ip, Vo = Vo_slider.val):
     return np.power(JoIp*x/(Vo+d), ip)		#Injection from p-type electrode
-def Tseries(x, JoTs, ts):
+def Tseries(x, JoTs, ts, Vo = Vo_slider.val):
     return np.power(JoTs*x/(Vo+d), ts)		#space charge transport (series)
-def Rs_volt_drop_func(x):
+def Rs_volt_drop_func(x, width = width_slider.val, Vbi = Vbi_slider.val, Vo = Vo_slider.val):
     return width*np.log(np.exp((x-Vo-Vbi)/width)+1) #voltage drop across Rs
-def Rseries(x, Rs):
-    return Rs_volt_drop_func(x)/Rs/A*1000	#Ohmic series (update needed)
+def Rseries(x, Rs, width = width_slider.val, Vbi = Vbi_slider.val, Vo = Vo_slider.val):
+    return Rs_volt_drop_func(x, width, Vbi, Vo)/Rs/A*1000	#Ohmic series
 
 # Circuit legs
 def Jdark_exp(x, Jo, n, JoBd, b):
     return 1/(1/Diode(x, Jo, n) + 1/block_Diode(x, JoBd))				#exponential leg
-def Jdark_shunt(x, JoTsh, tsh, JoBsh, b):
-    return 1/(1/Tshunt(x, JoTsh, tsh) + 1/block_Tshunt(x, JoBsh, b))		#transport (shunt) leg
-def Jdark_series(x, JoTs, ts, JoIp, ip):
-    return 1/(1/Tseries(x, JoTs, ts)+1/Inj_p(x, JoIp, ip))				#transport (series) leg
+def Jdark_shunt(x, JoTsh, tsh, JoBsh, b, Vbi = Vbi_slider.val):
+    return 1/(1/Tshunt(x, JoTsh, tsh, Vbi) + 1/block_Tshunt(x, JoBsh, b, Vbi))		#transport (shunt) leg
+def Jdark_series(x, JoTs, ts, JoIp, ip, Vo = Vo_slider.val):
+    return 1/(1/Tseries(x, JoTs, ts, Vo)+1/Inj_p(x, JoIp, ip, Vo))				#transport (series) leg
 
 # Complete circuit solution
-def Jdark(x, Rsh, Joffset, Jo, n, JoBd, JoTsh, tsh, JoBsh, JoTs, ts, JoIp, ip, Rs, b):
+def Jdark(x, Rsh, Joffset, Jo, n, JoBd, JoTsh, tsh, JoBsh, JoTs, ts, JoIp, ip, Rs, b, width = width_slider.val, Vbi = Vbi_slider.val, Vo = Vo_slider.val):
     return 1/(1/(Jdark_exp(x, Jo, n, JoBd, b) 
-                + Jdark_shunt(x, JoTsh, tsh, JoBsh, b) 
-                + Jdark_series(x, JoTs, ts, JoIp, ip) 
+                + Jdark_shunt(x, JoTsh, tsh, JoBsh, b, Vbi) 
+                + Jdark_series(x, JoTs, ts, JoIp, ip, Vo) 
                 + Rshunt(x, Rsh, Joffset)
                 ) 
-            + 1/Rseries(x, Rs)
+            + 1/Rseries(x, Rs, width, Vbi, Vo)
             )
-def Log_Jdark(x, Rsh, Joffset, Jo, n, JoBd, JoTsh, tsh , JoBsh, JoTs, ts, JoIp, ip, Rs, b):
-    return np.log10(Jdark(x, Rsh, Joffset, Jo, n, JoBd, JoTsh, tsh, JoBsh, JoTs, ts, JoIp, ip, Rs, b))
+
 
 # Voltage drop across Rs
-def Rs_volt_drop(x, Rsh, Joffset, Jo, n, JoBd, JoTsh, tsh, JoBsh, JoTs, ts, JoIp, ip, Rs, b):
-    return Jdark(x, Rsh, Joffset, Jo, n, JoBd, JoTsh, tsh, JoBsh, JoTs, ts, JoIp, ip, Rs, b) * A * Rs / 1000
+def Rs_volt_drop(x, Rsh, Joffset, Jo, n, JoBd, JoTsh, tsh, JoBsh, JoTs, ts, JoIp, ip, Rs, b, width = width_slider.val, Vbi = Vbi_slider.val, Vo = Vo_slider.val):
+    return Jdark(x, Rsh, Joffset, Jo, n, JoBd, JoTsh, tsh, JoBsh, JoTs, ts, JoIp, ip, Rs, b, width, Vbi, Vo) * A * Rs / 1000
 
 """
 Derivative of log-log Jdark functions
 """
 
-def Slope(x,Rsh,Joffset,Jo,n,JoBd,JoTsh,tsh,JoBsh,JoTs,ts,JoIp,ip, Rs, b):
-    return np.gradient(np.log10(Jdark(x, Rsh, Joffset, Jo, n, JoBd, JoTsh, tsh, JoBsh, JoTs, ts, JoIp, ip, Rs, b)), np.log10(x))
+def Slope(x,Rsh,Joffset,Jo,n,JoBd,JoTsh,tsh,JoBsh,JoTs,ts,JoIp,ip, Rs, b, width = width_slider.val, Vbi = Vbi_slider.val, Vo = Vo_slider.val):
+    return np.gradient(np.log10(Jdark(x, Rsh, Joffset, Jo, n, JoBd, JoTsh, tsh, JoBsh, JoTs, ts, JoIp, ip, Rs, b, width, Vbi, Vo)), np.log10(x))
 # slope of exponential leg
 def Slope_exp(x, Jo, n, JoBd, b):
     return np.gradient(np.log10(Jdark_exp(x, Jo, n, JoBd, b)), np.log10(x))
 # slope of transport (shunt) leg
-def Slope_shunt(x, JoTsh, tsh, JoBsh, b):
-    return np.gradient(np.log10(Jdark_shunt(x, JoTsh, tsh, JoBsh, b)), np.log10(x))	
+def Slope_shunt(x, JoTsh, tsh, JoBsh, b, Vbi = Vbi_slider.val):
+    return np.gradient(np.log10(Jdark_shunt(x, JoTsh, tsh, JoBsh, b, Vbi)), np.log10(x))	
 # slope of transport (series) leg
-def Slope_series(x, JoTs, ts, JoIp, ip):
-    return np.gradient(np.log10(Jdark_series(x, JoTs, ts, JoIp, ip)), np.log10(x))
+def Slope_series(x, JoTs, ts, JoIp, ip, Vo = Vo_slider.val):
+    return np.gradient(np.log10(Jdark_series(x, JoTs, ts, JoIp, ip, Vo)), np.log10(x))
 # slope of Rs element
-def Slope_Rseries(x, Rs):
-    return np.gradient(np.log10(Rseries(x, Rs)), np.log10(x)) 
+def Slope_Rseries(x, Rs, width = width_slider.val, Vbi = Vbi_slider.val, Vo = Vo_slider.val):
+    return np.gradient(np.log10(Rseries(x, Rs, width, Vbi, Vo)), np.log10(x)) 
 
 # Find slope of logj-logv plot 
 jvslope = np.gradient(np.log10(j), np.log10(v), edge_order=2)		#derivative of log-log jv data
@@ -257,22 +268,22 @@ axs[1].scatter(v,jvslope,s=1.3,color='#4d96f9')						#plot slope
 
 # Add Vbi and Vo to plot
 fint_j = interpolate.interp1d(v, j, kind='linear')
-axs[0].plot(Vo, fint_j(Vo), marker="+")
-axs[0].plot(Vbi, fint_j(Vbi), marker="+")
-axs[0].plot(Vo + Vbi, fint_j(Vo + Vbi), marker="+")
-axs[0].text(Vo, fint_j(Vo), '$V_0$', ha='right')
-axs[0].text(Vbi, fint_j(Vbi), '$V_{bi}$', ha='right')
-axs[0].text(Vbi + Vo, fint_j(Vbi+Vo), '$V_0+V_{bi}$', ha='left')
+Vo_point, = axs[0].plot(Vo_slider.val, fint_j(Vo_slider.val), marker="+")
+Vbi_point, = axs[0].plot(Vbi_slider.val, fint_j(Vbi_slider.val), marker="+")
+Vo_Vbi_point, = axs[0].plot(Vo_slider.val + Vbi_slider.val, fint_j(Vo_slider.val + Vbi_slider.val), marker="+")
+Vo_text = axs[0].text(Vo_slider.val, fint_j(Vo_slider.val), '$V_0$', ha='right')
+Vbi_text = axs[0].text(Vbi_slider.val, fint_j(Vbi_slider.val), '$V_{bi}$', ha='right')
+Vo_Vbi_text = axs[0].text(Vbi_slider.val + Vo_slider.val, fint_j(Vbi_slider.val+Vo_slider.val), '$V_0+V_{bi}$', ha='left')
 fint_jvslope = interpolate.interp1d(v, jvslope, kind='linear')
-axs[1].plot(Vo, fint_jvslope(Vo), marker='+')
-axs[1].plot(Vbi, fint_jvslope(Vbi), marker='+')
-axs[1].plot(Vo + Vbi, fint_jvslope(Vo + Vbi), marker='+')
-axs[1].text(Vo, fint_jvslope(Vo), '$V_0$', ha='right')
-axs[1].text(Vbi, fint_jvslope(Vbi), '$V_{bi}$', ha='right')
-axs[1].text(Vo + Vbi, fint_jvslope(Vo + Vbi), '$V_0+V_{bi}$', ha='left')
-axins.plot(Vo, Rs_volt_drop_func(Vo), marker='+')
-axins.plot(Vbi, Rs_volt_drop_func(Vbi), marker='+')
-axins.plot(Vo + Vbi, Rs_volt_drop_func(Vo + Vbi), marker='+')
+Vbi_slope_point, = axs[1].plot(Vo_slider.val, fint_jvslope(Vo_slider.val), marker='+')
+Vo_slope_point, = axs[1].plot(Vbi_slider.val, fint_jvslope(Vbi_slider.val), marker='+')
+Vo_Vbi_slope_point, = axs[1].plot(Vo_slider.val + Vbi_slider.val, fint_jvslope(Vo_slider.val + Vbi_slider.val), marker='+')
+Vo_slope_text = axs[1].text(Vo_slider.val, fint_jvslope(Vo_slider.val), '$V_0$', ha='right')
+Vbi_slope_text = axs[1].text(Vbi_slider.val, fint_jvslope(Vbi_slider.val), '$V_{bi}$', ha='right')
+Vo_Vbi_slope_text = axs[1].text(Vo_slider.val + Vbi_slider.val, fint_jvslope(Vo_slider.val + Vbi_slider.val), '$V_0+V_{bi}$', ha='left')
+axins.plot(Vo_slider.val, Rs_volt_drop_func(Vo_slider.val), marker='+')
+axins.plot(Vbi_slider.val, Rs_volt_drop_func(Vbi_slider.val), marker='+')
+axins.plot(Vo_slider.val + Vbi_slider.val, Rs_volt_drop_func(Vo_slider.val + Vbi_slider.val), marker='+')
 
 # Set initial parameters from sliders
 init_Rs = Rs_slider.val
@@ -368,7 +379,7 @@ Slope_series_line, = axs[1].plot(v,
                                               ),color='white', linewidth=0.8)
 Slope_Rseries_line, = axs[1].plot(v, 
                                  Slope_Rseries(v, 
-                                              init_Rs
+                                              init_Rs,
                                               ), color='gray', linewidth=1, linestyle='dashed')
                 
 init_params = [init_Rsh, 
@@ -384,7 +395,8 @@ init_params = [init_Rsh,
                 init_JoIp, 
                 init_ip, 
                 init_Rs,
-                init_b]
+                init_b,
+]
 
 # Add complete circuit solution to plot
 Guess_Jdark_line, = axs[0].plot(v, 
@@ -403,12 +415,15 @@ Fit_Slope_line, = axs[1].plot(v,
 # Add Rs voltage drops to inset
 Guess_Rs_volt_drop_line, = axins.plot(v, 
                                       Rs_volt_drop(v,*init_params),
-                                      linewidth=0.5)
+                                      linewidth=0.5, c='purple')
 Fit_Rs_volt_drop_line, = axins.plot(v, 
                                     Rs_volt_drop(v, *init_params),
-                                    linewidth=0.5)
+                                    linewidth=0.5, c='orange')
 Rs_volt_drop_func_line, = axins.plot(v, 
-                                     Rs_volt_drop_func(v), 
+                                     Rs_volt_drop_func(v, 
+                                        width_slider.val,
+                                        Vbi_slider.val,
+                                        Vo_slider.val), 
                                      linewidth=0.5, c='red')
 
 # Add labels for individual circuit elements
@@ -458,46 +473,73 @@ axs[0].legend(loc='upper left', frameon=False)
 # The function to be called anytime a slider's value changes
 def update(val):
     
-    # Update circuit element lines
-    Rshunt_line.set_ydata(
-        Rshunt(v,
-                Rsh_slider.val,
-                Joffset_slider.val)
-    )
-    Diode_line.set_ydata(
-        Diode(v,
-                Jo_slider.val,
-                n_slider.val)
-    )
-    block_Diode_line.set_ydata(
-        block_Diode(v,
+    guess_params = [Rsh_slider.val, 
+                    Joffset_slider.val, 
+                    Jo_slider.val,
+                    n_slider.val,
                     JoBd_slider.val, 
-                    b_slider.val)
+                    JoTsh_slider.val, 
+                    tsh_slider.val, 
+                    JoBsh_slider.val, 
+                    JoTs_slider.val, 
+                    ts_slider.val, 
+                    JoIp_slider.val, 
+                    ip_slider.val, 
+                    Rs_slider.val, 
+                    b_slider.val,
+                    width_slider.val,
+                    Vbi_slider.val,
+                    Vo_slider.val
+    ]
+    
+    # Update circuit element lines
+    Rshunt_line.set_ydata(Rshunt(v,
+                                  Rsh_slider.val,
+                                  Joffset_slider.val)
+    )
+    Diode_line.set_ydata(Diode(v,
+                                Jo_slider.val,
+                                n_slider.val)
+    )
+    block_Diode_line.set_ydata(block_Diode(v,
+                                            JoBd_slider.val)
     )
     Tshunt_line.set_ydata(
         Tshunt(v, 
                 JoTsh_slider.val, 
-                tsh_slider.val)
+                tsh_slider.val,
+                Vbi_slider.val)
     )
     block_Tshunt_line.set_ydata(
         block_Tshunt(v, 
                     JoBsh_slider.val, 
-                    b_slider.val)
+                    b_slider.val,
+                    Vbi_slider.val)
     )
     Tseries_line.set_ydata(
         Tseries(v, 
                 JoTs_slider.val, 
-                ts_slider.val)
+                ts_slider.val,
+                Vo_slider.val)
     )
     Inj_p_line.set_ydata(
         Inj_p(v, 
                 JoIp_slider.val, 
-                ip_slider.val)
+                ip_slider.val, 
+                Vo_slider.val)
     )
-    Rseries_line.set_ydata(
-        Rseries(v, 
-                Rs_slider.val)
+    Rseries_line.set_ydata(Rseries(v, 
+                            Rs_slider.val, 
+                            width_slider.val,
+                            Vbi_slider.val, 
+                            Vo_slider.val)
     )
+    Slope_Rseries_line.set_ydata(Slope_Rseries(v, 
+                                                Rs_slider.val,
+                                                width_slider.val,
+                                                Vbi_slider.val, 
+                                                Vo_slider.val)
+                                               )
     
     # Update circuit leg lines
     Jdark_exp_line.set_ydata(Jdark_exp(v,
@@ -510,47 +552,23 @@ def update(val):
                                            JoTsh_slider.val, 
                                            tsh_slider.val, 
                                            JoBsh_slider.val, 
-                                           b_slider.val
+                                           b_slider.val, 
+                                            Vbi_slider.val
                                            ))
     Jdark_series_line.set_ydata(Jdark_series(v, 
                                              JoTs_slider.val, 
                                             ts_slider.val, 
                                             JoIp_slider.val, 
-                                            ip_slider.val
+                                            ip_slider.val,
+                                            Vo_slider.val
                                         ))
-    Guess_Jdark_line.set_ydata(Jdark(v, 
-                                     Rsh_slider.val, 
-                                    Joffset_slider.val, 
-                                    Jo_slider.val,
-                                    n_slider.val,
-                                    JoBd_slider.val, 
-                                    JoTsh_slider.val, 
-                                    tsh_slider.val, 
-                                    JoBsh_slider.val, 
-                                    JoTs_slider.val, 
-                                    ts_slider.val, 
-                                    JoIp_slider.val, 
-                                    ip_slider.val, 
-                                    Rs_slider.val, 
-                                    b_slider.val
-                                ))
-    Guess_Slope_line.set_ydata(Slope(v, 
-                                     Rsh_slider.val, 
-                                    Joffset_slider.val, 
-                                    Jo_slider.val,
-                                    n_slider.val,
-                                    JoBd_slider.val, 
-                                    JoTsh_slider.val, 
-                                    tsh_slider.val, 
-                                    JoBsh_slider.val, 
-                                    JoTs_slider.val, 
-                                    ts_slider.val, 
-                                    JoIp_slider.val, 
-                                    ip_slider.val, 
-                                    Rs_slider.val, 
-                                    b_slider.val
-                                ))
-    Slope_exp_line.set_ydata(Slope_exp(v,                                       
+    Guess_Jdark_line.set_ydata(
+                                Jdark(v, *guess_params)
+                              )
+    Guess_Slope_line.set_ydata(
+                                Slope(v, *guess_params)
+                              )
+    Slope_exp_line.set_ydata(Slope_exp(v,
                                         Jo_slider.val,
                                         n_slider.val,
                                         JoBd_slider.val,
@@ -560,32 +578,21 @@ def update(val):
                                            JoTsh_slider.val, 
                                            tsh_slider.val, 
                                            JoBsh_slider.val, 
-                                           b_slider.val
+                                           b_slider.val,
+                                            Vbi_slider.val
                                         ))
     Slope_series_line.set_ydata(Slope_series(v, 
                                             JoTs_slider.val, 
                                             ts_slider.val, 
                                             JoIp_slider.val, 
-                                            ip_slider.val
+                                            ip_slider.val,
+                                            Vo_slider.val
                                         ))
     
     # Update Rs voltage drop lines
-    Guess_Rs_volt_drop_line.set_ydata(Rs_volt_drop(v, 
-                                                    Rsh_slider.val, 
-                                                    Joffset_slider.val, 
-                                                    Jo_slider.val,
-                                                    n_slider.val,
-                                                    JoBd_slider.val, 
-                                                    JoTsh_slider.val, 
-                                                    tsh_slider.val, 
-                                                    JoBsh_slider.val, 
-                                                    JoTs_slider.val, 
-                                                    ts_slider.val, 
-                                                    JoIp_slider.val, 
-                                                    ip_slider.val, 
-                                                    Rs_slider.val, 
-                                                    b_slider.val
-                                                ))
+    Guess_Rs_volt_drop_line.set_ydata(
+                                        Rs_volt_drop(v, *guess_params)
+                                    )
     
     # Update text box postions
     Rs_box.set_position((0.9*v.min(), Rseries(v.min(), Rs_slider.val), '$R_s$'))
@@ -600,13 +607,15 @@ def update(val):
                                                           JoTsh_slider.val,
                                                           tsh_slider.val,
                                                           JoBsh_slider.val, 
-                                                          b_slider.val
+                                                          b_slider.val, 
+                                                            Vbi_slider.val
                                                           ) - j.min(),[0.5]), j.min()))
     jseries_box.set_position((fsolve(lambda x: Jdark_series(x,
                                                             JoTs_slider.val,
                                                             ts_slider.val,
                                                             JoIp_slider.val,
-                                                            ip_slider.val
+                                                            ip_slider.val,
+                                                            Vo_slider.val
                                                             ) - j.min(),[1]), j.min()))
     jdiff_slope_box.set_position((0.95*v.max(), Slope_exp(v,
                                                             Jo_slider.val,
@@ -618,14 +627,30 @@ def update(val):
                                                           JoTsh_slider.val,
                                                           tsh_slider.val,
                                                           JoBsh_slider.val, 
-                                                          b_slider.val
+                                                          b_slider.val,
+                                                            Vbi_slider.val
                                                             )[-1]))
     jseries_slope_box.set_position((0.85*v.max(), Slope_series(v,
                                                                 JoTs_slider.val,
                                                                 ts_slider.val,
                                                                 JoIp_slider.val,
-                                                                ip_slider.val
+                                                                ip_slider.val, 
+                                                                Vo_slider.val
                                                             )[-1]))
+    
+    # update Vo & Vbi points
+    Vo_point.set_data(Vo_slider.val, fint_j(Vo_slider.val))
+    Vbi_point.set_data(Vbi_slider.val, fint_j(Vbi_slider.val))
+    Vo_Vbi_point.set_data(Vo_slider.val + Vbi_slider.val, fint_j(Vo_slider.val + Vbi_slider.val))
+    Vo_text.set_position((Vo_slider.val, fint_j(Vo_slider.val)))
+    Vbi_text.set_position((Vbi_slider.val, fint_j(Vbi_slider.val)))
+    Vo_Vbi_text.set_position((Vbi_slider.val + Vo_slider.val, fint_j(Vbi_slider.val+Vo_slider.val)))
+    Vbi_slope_point.set_data(Vo_slider.val, fint_jvslope(Vo_slider.val))
+    Vo_slope_point.set_data(Vbi_slider.val, fint_jvslope(Vbi_slider.val))
+    Vo_Vbi_slope_point.set_data(Vo_slider.val + Vbi_slider.val, fint_jvslope(Vo_slider.val + Vbi_slider.val))
+    Vo_slope_text.set_position((Vo_slider.val, fint_jvslope(Vo_slider.val)))
+    Vbi_slope_text.set_position((Vbi_slider.val, fint_jvslope(Vbi_slider.val)))
+    Vo_Vbi_slope_text.set_position((Vo_slider.val + Vbi_slider.val, fint_jvslope(Vo_slider.val + Vbi_slider.val)))
     
     fig.canvas.draw_idle()
     
@@ -644,6 +669,9 @@ JoIp_slider.on_changed(update)
 ip_slider.on_changed(update)
 Rs_slider.on_changed(update)
 b_slider.on_changed(update)
+width_slider.on_changed(update)
+Vbi_slider.on_changed(update)
+Vo_slider.on_changed(update)
 
 # Create a `matplotlib.widgets.Button` to fit, accept fit, save
 fitax = fig.add_axes([0.6, 0.025, 0.1, 0.04])
@@ -656,8 +684,11 @@ button3 = Button(saveax, 'Save', color='orange')
 # Function that activates when Fit button is pressed
 def fit(event):
     
+    def Log_Jdark(x, Rsh, Joffset, Jo, n, JoBd, JoTsh, tsh , JoBsh, JoTs, ts, JoIp, ip, Rs, b, width = width_slider.val, Vbi = Vbi_slider.val, Vo = Vo_slider.val):
+        return np.log10(Jdark(x, Rsh, Joffset, Jo, n, JoBd, JoTsh, tsh, JoBsh, JoTs, ts, JoIp, ip, Rs, b, width, Vbi, Vo))
+    
     #use slider values as guess values for fit
-    guess_param = np.array([
+    init_fit_params = np.array([
         Rsh_slider.val, 
         Jo_slider.val, 
         Jo_slider.val,
@@ -673,10 +704,30 @@ def fit(event):
         Rs_slider.val,
         b_slider.val
     ])
-    fit_params, pcov = curve_fit(Log_Jdark,v,np.log10(j), p0=guess_param, method='lm')		# Fit log of jvcurve
-    Fit_Jdark_line.set_ydata(Jdark(v,*fit_params))			#plot fit
-    Fit_Slope_line.set_ydata(Slope(v,*fit_params))			#plot slope of fit
-    perr = np.sqrt(np.diag(pcov))		  					#standard deviation of errors 
+    
+    # Fit log of jvcurve
+    fit_params, pcov = curve_fit(Log_Jdark, 
+                                v, 
+                                np.log10(j), 
+                                p0=init_fit_params, 
+                                method='lm'
+    )
+    #plot fit
+    Fit_Jdark_line.set_ydata(Jdark(v, 
+                                    *fit_params, 
+                                    width_slider.val, 
+                                    Vbi_slider.val, 
+                                    Vo_slider.val)
+    )
+    #plot slope of fit
+    Fit_Slope_line.set_ydata(Slope(v, 
+                                    *fit_params,
+                                    width_slider.val, 
+                                    Vbi_slider.val, 
+                                    Vo_slider.val)
+    )
+    #standard deviation of errors
+    perr = np.sqrt(np.diag(pcov))
     
     #show fit results
     fit_results = pd.DataFrame(index = ['Rsh', 'Joffset', 'Jo', 'n', 'JoBd', 'JoTsh', 'tsh', 'JoBsh', 'JoTs', 'ts', 'JoIp', 'ip', 'Rs','b'])
@@ -721,8 +772,17 @@ def fit(event):
                         JoIp_slider.val, 
                         ip_slider.val, 
                         Rs_slider.val,
-                        b_slider.val
-            ))
+                        b_slider.val,
+                        width_slider.val,
+                        Vbi_slider.val,
+                        Vo_slider.val)
+        )
+        Rs_volt_drop_func_line.set_ydata(
+            Rs_volt_drop_func(v, 
+                                width_slider.val, 
+                                Vbi_slider.val,
+                                Vo_slider.val)
+        )
         
         fig.canvas.draw_idle()
         
